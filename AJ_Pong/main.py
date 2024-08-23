@@ -16,9 +16,9 @@ class GameMain:
         self.music_channel.set_volume(0.2)
         
         self.sounds_list = {
-            'paddle_hit': pygame.mixer.Sound('AJ_Pong/sounds/paddle_hit.wav'),
-            'score': pygame.mixer.Sound('AJ_Pong/sounds/score.wav'),
-            'wall_hit': pygame.mixer.Sound('AJ_Pong/sounds/wall_hit.wav')
+            'paddle_hit': pygame.mixer.Sound('../AJ_Pong/sounds/paddle_hit.wav'),
+            'score': pygame.mixer.Sound('../AJ_Pong/sounds/score.wav'),
+            'wall_hit': pygame.mixer.Sound('../AJ_Pong/sounds/wall_hit.wav')
         }
 
         self.small_font = pygame.font.Font('./font.ttf', 24)
@@ -42,7 +42,8 @@ class GameMain:
         self.playerCollide = 0
         self.shroomCollision = False
         self.time = 0
-
+        self.pick = False
+        self.ai = False
         
 
     def update(self, dt, events, runtime):
@@ -62,7 +63,7 @@ class GameMain:
 
                         self.player1_score=0
                         self.player2_score=0
-                        print(self.player1_score)
+                        # print(self.player1_score)
 
                         if self.winning_player == 1:
                             self.serving_player = 2
@@ -82,7 +83,20 @@ class GameMain:
         elif self.game_state == 'play':
             self.time += 1
             # print(shroomCollision)
-            print(self.createShroom)
+            # print(self.createShroom)
+
+            if self.ai:
+                if not self.pick:
+                    self.player2.rect.y = HEIGHT // 2
+                    self.player2.dy = random.choice([-PADDLE_SPEED,PADDLE_SPEED])
+                    self.pick = True
+                if self.player2.rect.y + self.player2.rect.height >= HEIGHT:
+                    self.player2.dy = -PADDLE_SPEED
+                    print('yes')
+                elif self.player2.rect.y <= 0:
+                    self.player2.dy = PADDLE_SPEED
+                    print('no')
+
             if not self.createShroom:
                 if self.time == 100:
                     print('Shroom Generated')
@@ -118,10 +132,11 @@ class GameMain:
                 if self.ball.Collides(self.shroom):
                     self.createShroom = False
                     self.time = 0
-                    if self.playerCollide == 1:
-                        self.player1.rect.height += 10
-                    elif self.playerCollide == 2:
-                        self.player2.rect.height += 10
+                    if self.player1.height < 600 and self.player2.height < 600:
+                        if self.playerCollide == 1:
+                            self.player1.rect.height += 10
+                        elif self.playerCollide == 2:
+                            self.player2.rect.height += 10
                     
                     
                     
@@ -161,6 +176,13 @@ class GameMain:
                     self.ball.Reset()
 
         key = pygame.key.get_pressed()
+        if key[pygame.K_o]:
+            if self.ai:
+                self.ai = False
+            else:
+                self.ai = True
+
+
         if key[pygame.K_w]:
             self.player1.dy = -PADDLE_SPEED
         elif key[pygame.K_s]:
@@ -168,12 +190,15 @@ class GameMain:
         else:
             self.player1.dy = 0
 
-        if key[pygame.K_UP]:
-            self.player2.dy = -PADDLE_SPEED
-        elif key[pygame.K_DOWN]:
-            self.player2.dy = PADDLE_SPEED
-        else:
-            self.player2.dy = 0
+        if not self.ai:
+            if key[pygame.K_UP]:
+                self.player2.dy = -PADDLE_SPEED
+            elif key[pygame.K_DOWN]:
+                self.player2.dy = PADDLE_SPEED
+            else:
+                self.player2.dy = 0
+        
+        
 
 
         if self.game_state == 'play':
@@ -184,7 +209,10 @@ class GameMain:
 
     def render(self):
         self.screen.fill((40, 45, 52))
-
+        if self.ai:
+            t_welcome = self.small_font.render("AI ON", False, (255, 255, 255))
+            text_rect = t_welcome.get_rect(center=(WIDTH / 2, 90))
+            self.screen.blit(t_welcome, text_rect)
         if self.game_state == 'start':
             t_welcome = self.small_font.render("Welcome to Pong!", False, (255, 255, 255))
             text_rect = t_welcome.get_rect(center=(WIDTH / 2, 30))

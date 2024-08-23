@@ -11,7 +11,7 @@ class Shroom:
         self.rect = pygame.Rect(x,y,100,100)
 
     def render(self):
-        pic = pygame.image.load('AJ_Pong/sprites/greyshroom.png').convert()
-        pygame.draw.rect(self.screen, (0,0,0,0), self.rect)
+        pic = pygame.image.load('../AJ_Pong/sprites/greyshroom.png').convert()
+        # pygame.draw.rect(self.screen, (0,0,0,0), self.rect)
         self.screen.blit(pic, (self.x,self.y))
 

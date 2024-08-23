@@ -4,6 +4,7 @@ from constant import *
 from Ball import Ball
 from Paddle import Paddle
 from shroom import Shroom
+import math
 
 
 class GameMain:
@@ -31,8 +32,8 @@ class GameMain:
         self.serving_player = 1
         self.winning_player = 0
 
-        self.player1 = Paddle(self.screen, 30, 90, 15, 60)
-        self.player2 = Paddle(self.screen, WIDTH - 30, HEIGHT - 90, 15, 60)
+        self.player1 = Paddle(self.screen, 30, 90, 15, 100)
+        self.player2 = Paddle(self.screen, WIDTH - 30, HEIGHT - 90, 15, 100)
 
         self.ball = Ball(self.screen, WIDTH/2 - 6, HEIGHT/2 - 6, 12, 12)
 
@@ -44,7 +45,11 @@ class GameMain:
         self.time = 0
         self.pick = False
         self.ai = False
-        
+        self.mediumai = False
+        self.mediumTime = 0
+        self.bounceLocation = 0
+        self.bounce = False
+        self.yImpact = 0
 
     def update(self, dt, events, runtime):
         for event in events:
@@ -85,6 +90,57 @@ class GameMain:
             # print(shroomCollision)
             # print(self.createShroom)
 
+            if self.mediumai:
+                self.mediumTime += 1
+                # print(f'ball pos {self.ball.rect.x}')
+                if not self.pick:
+                    self.player2.rect.y = HEIGHT // 2
+                    self.player2.dy = random.choice([-PADDLE_SPEED,PADDLE_SPEED])
+                    self.pick = True
+                # print(f'Paddle Speed {self.player2.dy}')
+                # if (self.mediumTime == random.randint(100,1000) or self.mediumTime % 100 == 0) and self.ball.rect.x <= WIDTH // 2:
+                #     print('hi')
+                #     self.mediumTime = 0
+                #     self.player2.dy = -PADDLE_SPEED
+                # if self.ball.rect.y < HEIGHT // 2:
+                #     if self.player2.rect.y + self.player2.rect.height >= HEIGHT //1.5:
+                #         self.player2.dy = -PADDLE_SPEED
+                #     elif self.player2.rect.y <= 0:
+                #         self.player2.dy = PADDLE_SPEED
+                # if self.ball.rect.y >= HEIGHT // 2:
+                #     if self.player2.rect.y + self.player2.rect.height <= HEIGHT //1.5:
+                #         self.player2.dy = PADDLE_SPEED
+                #     elif self.player2.rect.y >= HEIGHT:
+                #         self.player2.dy = -PADDLE_SPEED
+                if self.bounce:
+                    bounceSpot = (self.ball.rect.x, self.ball.rect.y, self.ball.dx)
+                    #Bouncing towards AI
+                    if bounceSpot[2] > 0:
+                        print('called')
+                        # theta = math.atan(self.ball.dy,self.ball.dx)
+                        distance = abs(bounceSpot[0] - self.player2.rect.x)
+                        timeImpact = distance / self.ball.dx
+                        #Top
+                        if self.ball.dy > 0:
+                            self.yImpact = int(bounceSpot[1] + self.ball.dy * timeImpact)
+                        elif self.ball.dy < 0:
+                            self.yImpact = int(bounceSpot[1] - self.ball.dy * timeImpact)
+                        print(self.yImpact)
+                        if self.yImpact - 10 > self.player2.rect.y:
+                            self.player2.dy = PADDLE_SPEED
+                        elif self.yImpact + 10 < self.player2.rect.y:
+                            self.player2.dy = -PADDLE_SPEED
+                        elif abs(self.yImpact - self.player2.rect.y) < 50:
+                            print('The paddle is on spot')
+                            self.player2.dy = 0
+                        #Disablet this to make it cheating basically
+                        # self.bounce = False
+
+                # if self.player2.rect.y + self.player2.rect.height >= HEIGHT:
+                #         self.player2.dy = -PADDLE_SPEED
+                # elif self.player2.rect.y <= 0:
+                #     self.player2.dy = PADDLE_SPEED
+
             if self.ai:
                 if not self.pick:
                     self.player2.rect.y = HEIGHT // 2
@@ -103,7 +159,7 @@ class GameMain:
                     self.shroom = Shroom(self.screen, random.randint(100,1180), random.randint(100,620))
                     self.createShroom = True
                     
-            print(self.time)
+            # print(self.time)
             
             if self.ball.Collides(self.player1):
                 self.playerCollide = 1
@@ -114,7 +170,8 @@ class GameMain:
                     self.ball.dy = -random.uniform(30, 450)
                 else:
                     self.ball.dy = random.uniform(30, 450)
-
+                self.bounce = True 
+                self.bounceLocation = 3
                 self.music_channel.play(self.sounds_list['paddle_hit'])
 
             if self.ball.Collides(self.player2):
@@ -143,12 +200,16 @@ class GameMain:
 
             # ball hit top wall
             if self.ball.rect.y <= 0:
+                self.bounceLocation = 1
+                self.bounce = True
                 self.ball.rect.y = 0
                 self.ball.dy = -self.ball.dy
                 self.music_channel.play(self.sounds_list['wall_hit'])
 
             # ball hit bottom wall, 12 represents ball size
             if self.ball.rect.y >= HEIGHT - 12:
+                self.bounceLocation = 2
+                self.bounce = True
                 self.ball.rect.y = HEIGHT - 12
                 self.ball.dy = -self.ball.dy
                 self.music_channel.play(self.sounds_list['wall_hit'])
@@ -181,8 +242,20 @@ class GameMain:
                 self.ai = False
             else:
                 self.ai = True
+        if key[pygame.K_i]:
+            if self.mediumai:
+                self.mediumai = False
+            else:
+                self.mediumai = True
 
-
+        if key[pygame.K_p]:
+            # previousX = self.ball.dx
+            # previousY = self.ball.dy
+            self.ball.dx = 0
+            self.ball.dy = 0
+        # if key[pygame.K_LEFTBRACKET]:
+        #     self.ball.dx = previousX
+        #     self.ball.dy = previousY
         if key[pygame.K_w]:
             self.player1.dy = -PADDLE_SPEED
         elif key[pygame.K_s]:
@@ -190,7 +263,7 @@ class GameMain:
         else:
             self.player1.dy = 0
 
-        if not self.ai:
+        if not self.ai and not self.mediumai:
             if key[pygame.K_UP]:
                 self.player2.dy = -PADDLE_SPEED
             elif key[pygame.K_DOWN]:
@@ -210,6 +283,10 @@ class GameMain:
     def render(self):
         self.screen.fill((40, 45, 52))
         if self.ai:
+            t_welcome = self.small_font.render("AI ON", False, (255, 255, 255))
+            text_rect = t_welcome.get_rect(center=(WIDTH / 2, 90))
+            self.screen.blit(t_welcome, text_rect)
+        if self.mediumai:
             t_welcome = self.small_font.render("AI ON", False, (255, 255, 255))
             text_rect = t_welcome.get_rect(center=(WIDTH / 2, 90))
             self.screen.blit(t_welcome, text_rect)

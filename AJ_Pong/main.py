@@ -50,6 +50,7 @@ class GameMain:
         self.bounceLocation = 0
         self.bounce = False
         self.yImpact = 0
+        self.initialServe = True
 
     def update(self, dt, events, runtime):
         for event in events:
@@ -77,6 +78,7 @@ class GameMain:
 
 
         if self.game_state == 'serve':
+            self.initialServe = True
             self.createShroom = False
             self.time = 0
             self.ball.dy = random.uniform(-150, 150)
@@ -89,7 +91,19 @@ class GameMain:
             self.time += 1
             # print(shroomCollision)
             # print(self.createShroom)
-
+            if self.initialServe:
+                self.initialServe = False
+                bounceSpot = (self.ball.rect.x, self.ball.rect.y, self.ball.dx)
+                if bounceSpot[2] > 0:
+                        print('--------------')
+                        print('called')
+                        self.bounce = False
+                        # theta = math.atan(self.ball.dy,self.ball.dx)
+                        distance = abs(bounceSpot[0] - self.player2.rect.x)
+                        timeImpact = distance / self.ball.dx
+                        #Top
+                        # if self.ball.dy > 0:
+                        self.yImpact = int(bounceSpot[1] + (self.ball.dy * timeImpact))
             if self.mediumai:
                 self.mediumTime += 1
                 # print(f'ball pos {self.ball.rect.x}')
@@ -116,25 +130,34 @@ class GameMain:
                     bounceSpot = (self.ball.rect.x, self.ball.rect.y, self.ball.dx)
                     #Bouncing towards AI
                     if bounceSpot[2] > 0:
+                        print('--------------')
                         print('called')
+                        self.bounce = False
                         # theta = math.atan(self.ball.dy,self.ball.dx)
                         distance = abs(bounceSpot[0] - self.player2.rect.x)
                         timeImpact = distance / self.ball.dx
                         #Top
-                        if self.ball.dy > 0:
-                            self.yImpact = int(bounceSpot[1] + self.ball.dy * timeImpact)
-                        elif self.ball.dy < 0:
-                            self.yImpact = int(bounceSpot[1] - self.ball.dy * timeImpact)
-                        print(self.yImpact)
-                        if self.yImpact - 10 > self.player2.rect.y:
-                            self.player2.dy = PADDLE_SPEED
-                        elif self.yImpact + 10 < self.player2.rect.y:
-                            self.player2.dy = -PADDLE_SPEED
-                        elif abs(self.yImpact - self.player2.rect.y) < 50:
-                            print('The paddle is on spot')
-                            self.player2.dy = 0
+                        # if self.ball.dy > 0:
+                        self.yImpact = int(bounceSpot[1] + (self.ball.dy * timeImpact))
+                        # elif self.ball.dy < 0:
+                        #     self.yImpact = int(bounceSpot[1] - self.ball.dy * timeImpact)
+                        print(f'Predicted Impact: {self.yImpact}')
+                        print(f'Ball Speed: {self.ball.dy}')
+                        print(f'Current Position: {self.player2.rect.y}')
+                        print('--------------')
+                if self.yImpact > (self.player2.rect.y + self.player2.rect.height // 2):
+                    print('going up')
+                    self.player2.dy = PADDLE_SPEED
+                if self.yImpact < (self.player2.rect.y + self.player2.rect.height // 2):
+                    self.player2.dy = -PADDLE_SPEED
+                
+                if abs(self.yImpact - (self.player2.rect.y + self.player2.rect.height // 2)) <= 10:
+                    print('The paddle is on spot')
+                    self.player2.dy = 0
+                            # self.bounce = False
                         #Disablet this to make it cheating basically
                         # self.bounce = False
+                        
 
                 # if self.player2.rect.y + self.player2.rect.height >= HEIGHT:
                 #         self.player2.dy = -PADDLE_SPEED

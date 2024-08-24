@@ -5,7 +5,7 @@ from Ball import Ball
 from Paddle import Paddle
 from shroom import Shroom
 import math
-
+from ice import Ice
 
 class GameMain:
     def __init__(self):
@@ -32,8 +32,8 @@ class GameMain:
         self.serving_player = 1
         self.winning_player = 0
 
-        self.player1 = Paddle(self.screen, 30, 90, 15, 100)
-        self.player2 = Paddle(self.screen, WIDTH - 30, HEIGHT - 90, 15, 100)
+        self.player1 = Paddle(self.screen, 30, 90, 15, 100, PADDLE_SPEED)
+        self.player2 = Paddle(self.screen, WIDTH - 30, HEIGHT - 90, 15, 100, PADDLE_SPEED)
 
         self.ball = Ball(self.screen, WIDTH/2 - 6, HEIGHT/2 - 6, 12, 12)
 
@@ -51,6 +51,15 @@ class GameMain:
         self.bounce = False
         self.yImpact = 0
         self.initialServe = True
+        self.createIce = False
+        self.iceTime = 0
+
+        self.player1Speed = 600
+        self.player2Speed = 600
+
+        self.playerShroom = 0
+        self.shroomTime = 0
+        
 
     def update(self, dt, events, runtime):
         for event in events:
@@ -78,9 +87,13 @@ class GameMain:
 
 
         if self.game_state == 'serve':
+            self.player1.reset()
+            self.player2.reset()
             self.initialServe = True
             self.createShroom = False
+            self.createIce = False
             self.time = 0
+            self.iceTime = 0
             self.ball.dy = random.uniform(-150, 150)
             if self.serving_player == 1:
                 self.ball.dx = random.uniform(420, 600)
@@ -89,6 +102,7 @@ class GameMain:
 
         elif self.game_state == 'play':
             self.time += 1
+            self.iceTime += 1
             # print(shroomCollision)
             # print(self.createShroom)
             if self.initialServe:
@@ -141,18 +155,18 @@ class GameMain:
                         self.yImpact = int(bounceSpot[1] + (self.ball.dy * timeImpact))
                         # elif self.ball.dy < 0:
                         #     self.yImpact = int(bounceSpot[1] - self.ball.dy * timeImpact)
-                        print(f'Predicted Impact: {self.yImpact}')
-                        print(f'Ball Speed: {self.ball.dy}')
-                        print(f'Current Position: {self.player2.rect.y}')
-                        print('--------------')
+                        # print(f'Predicted Impact: {self.yImpact}')
+                        # print(f'Ball Speed: {self.ball.dy}')
+                        # print(f'Current Position: {self.player2.rect.y}')
+                        # print('--------------')
                 if self.yImpact > (self.player2.rect.y + self.player2.rect.height // 2):
-                    print('going up')
-                    self.player2.dy = PADDLE_SPEED
+                    # print('going up')
+                    self.player2.dy = self.player2Speed
                 if self.yImpact < (self.player2.rect.y + self.player2.rect.height // 2):
-                    self.player2.dy = -PADDLE_SPEED
+                    self.player2.dy = -self.player2Speed
                 
                 if abs(self.yImpact - (self.player2.rect.y + self.player2.rect.height // 2)) <= 10:
-                    print('The paddle is on spot')
+                    # print('The paddle is on spot')
                     self.player2.dy = 0
                             # self.bounce = False
                         #Disablet this to make it cheating basically
@@ -176,7 +190,12 @@ class GameMain:
                     self.player2.dy = PADDLE_SPEED
                     print('no')
 
-            if not self.createShroom:
+            if not self.createIce:
+                if self.iceTime == 100:
+                    print('Ice Generated')
+                    self.ice = Ice(self.screen, random.randint(100,1180), random.randint(100,620))
+                    self.createIce = True
+            if not self.createShroom and not self.shroomCollision:
                 if self.time == 100:
                     print('Shroom Generated')
                     self.shroom = Shroom(self.screen, random.randint(100,1180), random.randint(100,620))
@@ -211,15 +230,42 @@ class GameMain:
             if self.createShroom:
                 if self.ball.Collides(self.shroom):
                     self.createShroom = False
+                    self.shroomTime = 0
                     self.time = 0
+                    self.shroomCollision = True
                     if self.player1.height < 600 and self.player2.height < 600:
                         if self.playerCollide == 1:
-                            self.player1.rect.height += 10
+                            self.playerShroom = 1
+                            self.player1.rect.height = 150
                         elif self.playerCollide == 2:
-                            self.player2.rect.height += 10
+                            self.playerShroom = 2
+                            self.player2.rect.height = 150
+            
+            if self.shroomCollision:
+                self.shroomTime += 1
+                if self.shroomTime == 200:
+                    print('Times up!')
+                    self.shroomTime = 0
+                    self.time = 0
+                    self.shroomCollision = False
+                    if self.playerShroom == 1:
+                        self.player1.rect.height = 100
+                    elif self.playerShroom == 2:
+                        self.player2.rect.height = 100
+            print(self.createIce)
+            if self.createIce:
+                if self.ball.Collides(self.ice):
+                    self.createIce = False
+                    self.iceTime = 0
+                    print('Slow')
+                    if self.playerCollide == 1 and self.player2.dy > 100:
+                        self.player2Speed -= 100
+                    elif self.playerCollide == 2 and self.player1.dy > 100:
+                        self.player1Speed -= 100
                     
                     
                     
+            # print(f'Player Speed: {self.player2.dy} and {self.player1.dy}')
 
             # ball hit top wall
             if self.ball.rect.y <= 0:
@@ -280,17 +326,17 @@ class GameMain:
         #     self.ball.dx = previousX
         #     self.ball.dy = previousY
         if key[pygame.K_w]:
-            self.player1.dy = -PADDLE_SPEED
+            self.player1.dy = -self.player1Speed
         elif key[pygame.K_s]:
-            self.player1.dy = PADDLE_SPEED
+            self.player1.dy = self.player1Speed
         else:
             self.player1.dy = 0
 
         if not self.ai and not self.mediumai:
             if key[pygame.K_UP]:
-                self.player2.dy = -PADDLE_SPEED
+                self.player2.dy = -self.player2Speed
             elif key[pygame.K_DOWN]:
-                self.player2.dy = PADDLE_SPEED
+                self.player2.dy = self.player2Speed
             else:
                 self.player2.dy = 0
         
@@ -355,6 +401,8 @@ class GameMain:
         if self.createShroom:
             # print("Shroom Rendered")
             self.shroom.render()
+        if self.createIce:
+            self.ice.render()
 
 
     def DisplayScore(self):

@@ -9,7 +9,7 @@ class Shroom:
         self.y = y
         # self.rect = pygame.Rect(x,y,66,79)
         self.rect = pygame.Rect(x,y,100,100)
-        self.pic = pygame.image.load('../AJ_Pong/sprites/greyshroom.png').convert()
+        self.pic = pygame.image.load('./AJ_Pong/sprites/greyshroom.png')
 
     def render(self):
         

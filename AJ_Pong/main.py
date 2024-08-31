@@ -6,6 +6,7 @@ from Paddle import Paddle
 from shroom import Shroom
 import math
 from ice import Ice
+from itertools import cycle
 
 class GameMain:
     def __init__(self):
@@ -17,10 +18,24 @@ class GameMain:
         self.music_channel.set_volume(0.2)
         
         self.sounds_list = {
-            'paddle_hit': pygame.mixer.Sound('../AJ_Pong/sounds/paddle_hit.wav'),
-            'score': pygame.mixer.Sound('../AJ_Pong/sounds/score.wav'),
-            'wall_hit': pygame.mixer.Sound('../AJ_Pong/sounds/wall_hit.wav')
+            'paddle_hit': pygame.mixer.Sound('./AJ_Pong/sounds/paddle_hit.wav'),
+            'score': pygame.mixer.Sound('./AJ_Pong/sounds/score.wav'),
+            'wall_hit': pygame.mixer.Sound('./AJ_Pong/sounds/wall_hit.wav')
         }
+
+        self.frames = [pygame.image.load(f'/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sprites/{i}.png') for i in range(1, 7)]
+        self.cycling = cycle(self.frames)
+        self.currentFrame = next(self.cycling)
+        self.counter = 0
+        self.frameDelay = 5
+
+        self.hitFrames = [pygame.transform.scale(pygame.image.load(f'/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sounds/hit{i}.png'),(86,53)) for i in range(1,6)]
+        self.frameCycle = cycle(self.hitFrames)
+        self.currentHit = next(self.frameCycle)
+        self.hitCounter = 0
+        self.hitDelay = 5
+        self.isHit = False
+        self.called = 0
 
         self.small_font = pygame.font.Font('./font.ttf', 24)
         self.large_font = pygame.font.Font('./font.ttf', 48)
@@ -32,8 +47,8 @@ class GameMain:
         self.serving_player = 1
         self.winning_player = 0
 
-        self.player1 = Paddle(self.screen, 30, 90, 15, 100, PADDLE_SPEED)
-        self.player2 = Paddle(self.screen, WIDTH - 30, HEIGHT - 90, 15, 100, PADDLE_SPEED)
+        self.player1 = Paddle(self.screen, 0, 90, 15, 100, PADDLE_SPEED,1)
+        self.player2 = Paddle(self.screen, WIDTH - 40, HEIGHT - 90, 15, 100, PADDLE_SPEED,2)
 
         self.ball = Ball(self.screen, WIDTH/2 - 6, HEIGHT/2 - 6, 12, 12)
 
@@ -59,6 +74,10 @@ class GameMain:
 
         self.playerShroom = 0
         self.shroomTime = 0
+
+        pygame.mixer.init()
+        pygame.mixer.music.load('/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sounds/music.mp3')
+        pygame.mixer.music.play(-1)
         
 
     def update(self, dt, events, runtime):
@@ -80,22 +99,35 @@ class GameMain:
                         self.player2_score=0
                         # print(self.player1_score)
 
+             
+
                         if self.winning_player == 1:
-                            self.serving_player = 2
-                        else:
                             self.serving_player = 1
+                            if self.ai:
+                                print('Hard AI ON')
+                                self.ai = False
+                                self.mediumai = True
+                            elif self.mediumai:
+                                self.ai = True
+                                self.mediumai = False
+                        else:
+                            self.serving_player = 2
 
 
         if self.game_state == 'serve':
             self.player1.reset()
             self.player2.reset()
+            self.player1Speed = 600
+            self.player2Speed = 600
+            if self.ai:
+                self.player2Speed = 1000
             self.initialServe = True
             self.createShroom = False
             self.createIce = False
             self.time = 0
             self.iceTime = 0
             self.ball.dy = random.uniform(-150, 150)
-            if self.serving_player == 1:
+            if self.serving_player == 2:
                 self.ball.dx = random.uniform(420, 600)
             else:
                 self.ball.dx = -random.uniform(420, 600)
@@ -120,32 +152,16 @@ class GameMain:
                         self.yImpact = int(bounceSpot[1] + (self.ball.dy * timeImpact))
             if self.mediumai:
                 self.mediumTime += 1
-                # print(f'ball pos {self.ball.rect.x}')
                 if not self.pick:
                     self.player2.rect.y = HEIGHT // 2
-                    self.player2.dy = random.choice([-PADDLE_SPEED,PADDLE_SPEED])
+                    self.player2.dy = random.choice([-self.player2Speed,self.player2Speed])
                     self.pick = True
-                # print(f'Paddle Speed {self.player2.dy}')
-                # if (self.mediumTime == random.randint(100,1000) or self.mediumTime % 100 == 0) and self.ball.rect.x <= WIDTH // 2:
-                #     print('hi')
-                #     self.mediumTime = 0
-                #     self.player2.dy = -PADDLE_SPEED
-                # if self.ball.rect.y < HEIGHT // 2:
-                #     if self.player2.rect.y + self.player2.rect.height >= HEIGHT //1.5:
-                #         self.player2.dy = -PADDLE_SPEED
-                #     elif self.player2.rect.y <= 0:
-                #         self.player2.dy = PADDLE_SPEED
-                # if self.ball.rect.y >= HEIGHT // 2:
-                #     if self.player2.rect.y + self.player2.rect.height <= HEIGHT //1.5:
-                #         self.player2.dy = PADDLE_SPEED
-                #     elif self.player2.rect.y >= HEIGHT:
-                #         self.player2.dy = -PADDLE_SPEED
+
                 if self.bounce:
                     bounceSpot = (self.ball.rect.x, self.ball.rect.y, self.ball.dx)
-                    #Bouncing towards AI
                     if bounceSpot[2] > 0:
-                        print('--------------')
-                        print('called')
+                        # print('--------------')
+                        # print('called')
                         self.bounce = False
                         # theta = math.atan(self.ball.dy,self.ball.dx)
                         distance = abs(bounceSpot[0] - self.player2.rect.x)
@@ -180,30 +196,33 @@ class GameMain:
 
             if self.ai:
                 if not self.pick:
+                    self.player2Speed = 1000
                     self.player2.rect.y = HEIGHT // 2
-                    self.player2.dy = random.choice([-PADDLE_SPEED,PADDLE_SPEED])
+                    self.player2.dy = random.choice([-1000,1000])
                     self.pick = True
                 if self.player2.rect.y + self.player2.rect.height >= HEIGHT:
-                    self.player2.dy = -PADDLE_SPEED
-                    print('yes')
+                    
+                    self.player2.dy = -self.player2Speed
+                    # print('yes')
                 elif self.player2.rect.y <= 0:
-                    self.player2.dy = PADDLE_SPEED
-                    print('no')
+                    self.player2.dy = self.player2Speed
+                    # print('no')
 
             if not self.createIce:
                 if self.iceTime == 100:
-                    print('Ice Generated')
+                    # print('Ice Generated')
                     self.ice = Ice(self.screen, random.randint(100,1180), random.randint(100,620))
                     self.createIce = True
             if not self.createShroom and not self.shroomCollision:
                 if self.time == 100:
-                    print('Shroom Generated')
+                    # print('Shroom Generated')
                     self.shroom = Shroom(self.screen, random.randint(100,1180), random.randint(100,620))
                     self.createShroom = True
                     
             # print(self.time)
             
             if self.ball.Collides(self.player1):
+                self.isHit = True
                 self.playerCollide = 1
                 self.ball.dx = -self.ball.dx * 1.03  # reflect speed multiplier
                 self.ball.rect.x = self.player1.rect.x + 15
@@ -218,6 +237,7 @@ class GameMain:
 
             if self.ball.Collides(self.player2):
                 self.playerCollide = 2
+                self.isHit = True
                 self.ball.dx = -self.ball.dx * 1.03
                 self.ball.rect.x = self.player2.rect.x - 12
                 if self.ball.dy < 0:
@@ -243,8 +263,8 @@ class GameMain:
             
             if self.shroomCollision:
                 self.shroomTime += 1
-                if self.shroomTime == 200:
-                    print('Times up!')
+                if self.shroomTime == 400:
+                    # print('Times up!')
                     self.shroomTime = 0
                     self.time = 0
                     self.shroomCollision = False
@@ -252,16 +272,20 @@ class GameMain:
                         self.player1.rect.height = 100
                     elif self.playerShroom == 2:
                         self.player2.rect.height = 100
-            print(self.createIce)
+            # print(self.createIce)
             if self.createIce:
                 if self.ball.Collides(self.ice):
                     self.createIce = False
                     self.iceTime = 0
-                    print('Slow')
-                    if self.playerCollide == 1 and self.player2.dy > 100:
+                    # print('Slow')
+                    if self.playerCollide == 1 and self.player2Speed > 100:
+                        print('Player 2 Slowed')
                         self.player2Speed -= 100
-                    elif self.playerCollide == 2 and self.player1.dy > 100:
-                        self.player1Speed -= 100
+                        self.player2.dy = self.player2Speed
+                    elif self.playerCollide == 2 and self.player1Speed > 100:
+                        self.player1Speed -= 0
+                        self.player1.dy = self.player1Speed
+                        print('Player 1 Slowed')
                     
                     
                     
@@ -284,7 +308,7 @@ class GameMain:
                 self.music_channel.play(self.sounds_list['wall_hit'])
 
             if self.ball.rect.x < 0:
-                self.serving_player = 1
+                self.serving_player = 2
                 self.player2_score += 1
                 self.music_channel.play(self.sounds_list['score'])
                 if self.player2_score==WINNING_SCORE:
@@ -295,7 +319,7 @@ class GameMain:
                     self.ball.Reset()
 
             if self.ball.rect.x > WIDTH:
-                self.serving_player = 2
+                self.serving_player = 1
                 self.player1_score += 1
                 self.music_channel.play(self.sounds_list['score'])
                 if self.player1_score==WINNING_SCORE:
@@ -306,16 +330,16 @@ class GameMain:
                     self.ball.Reset()
 
         key = pygame.key.get_pressed()
-        if key[pygame.K_o]:
-            if self.ai:
-                self.ai = False
-            else:
-                self.ai = True
-        if key[pygame.K_i]:
-            if self.mediumai:
-                self.mediumai = False
-            else:
-                self.mediumai = True
+        # if key[pygame.K_o]:
+        #     if self.ai:
+        #         self.ai = False
+        #     else:
+        #         self.ai = True
+        # if key[pygame.K_i]:
+        #     if self.mediumai:
+        #         self.mediumai = False
+        #     else:
+        #         self.mediumai = True
 
         if key[pygame.K_p]:
             # previousX = self.ball.dx
@@ -327,8 +351,10 @@ class GameMain:
         #     self.ball.dy = previousY
         if key[pygame.K_w]:
             self.player1.dy = -self.player1Speed
+            # print(self.player1.dy)
         elif key[pygame.K_s]:
             self.player1.dy = self.player1Speed
+            # print(self.player1.dy)
         else:
             self.player1.dy = 0
 
@@ -350,7 +376,18 @@ class GameMain:
         self.player2.update(dt)
 
     def render(self):
-        self.screen.fill((40, 45, 52))
+        # self.screen.fill((40, 45, 52))
+
+        self.counter += 1
+        # print(self.counter)
+
+        if self.counter % self.frameDelay == 0:
+            self.currentFrame = next(self.cycling)
+            self.currentHit = next(self.frameCycle)
+        
+            
+        self.screen.blit(self.currentFrame,(0,0))
+
         if self.ai:
             t_welcome = self.small_font.render("AI ON", False, (255, 255, 255))
             text_rect = t_welcome.get_rect(center=(WIDTH / 2, 90))
@@ -360,11 +397,12 @@ class GameMain:
             text_rect = t_welcome.get_rect(center=(WIDTH / 2, 90))
             self.screen.blit(t_welcome, text_rect)
         if self.game_state == 'start':
-            t_welcome = self.small_font.render("Welcome to Pong!", False, (255, 255, 255))
+            t_welcome = self.small_font.render("Welcome to Pong I guess...", False, (255, 255, 255))
             text_rect = t_welcome.get_rect(center=(WIDTH / 2, 30))
             self.screen.blit(t_welcome, text_rect)
+            self.ai = True
 
-            t_press_enter_begin = self.small_font.render('Press Enter to begin!', False, (255, 255, 255))
+            t_press_enter_begin = self.small_font.render('Press Enter to begin or whatever...', False, (255, 255, 255))
             text_rect = t_press_enter_begin.get_rect(center=(WIDTH / 2, 60))
             self.screen.blit(t_press_enter_begin, text_rect)
         elif self.game_state == 'serve':
@@ -376,6 +414,7 @@ class GameMain:
             text_rect = t_enter_serve.get_rect(center=(WIDTH / 2, 60))
             self.screen.blit(t_enter_serve, text_rect)
         elif self.game_state == 'play':
+
             pass
         elif self.game_state == 'done':
             t_win = self.large_font.render("player" + str(self.serving_player) + "'s wins!", False, (255, 255, 255))
@@ -385,7 +424,9 @@ class GameMain:
             t_restart = self.small_font.render("Press Enter to restart", False, (255, 255, 255))
             text_rect = t_restart.get_rect(center=(WIDTH / 2, 70))
             self.screen.blit(t_restart, text_rect)
+            print(self.winning_player)
 
+        print(self.game_state)
         self.DisplayScore()
 
         #right paddle
@@ -397,6 +438,10 @@ class GameMain:
         #ball
         self.ball.render()
         # self.shroom.render()
+        self.p1speed = self.large_font.render(str(self.player1Speed), False, (255, 255, 255))
+        self.p2speed = self.large_font.render(str(self.player2Speed), False, (255, 255, 255))
+        self.screen.blit(self.p1speed, (WIDTH/2 - 500, HEIGHT/3))
+        self.screen.blit(self.p2speed, (WIDTH / 2 + 440, HEIGHT / 3))
 
         if self.createShroom:
             # print("Shroom Rendered")
@@ -408,8 +453,11 @@ class GameMain:
     def DisplayScore(self):
         self.t_p1_score = self.score_font.render(str(self.player1_score), False, (255, 255, 255))
         self.t_p2_score = self.score_font.render(str(self.player2_score), False, (255, 255, 255))
+
         self.screen.blit(self.t_p1_score, (WIDTH/2 - 150, HEIGHT/3))
         self.screen.blit(self.t_p2_score, (WIDTH / 2 + 90, HEIGHT / 3))
+
+        
 
 if __name__ == '__main__':
     main = GameMain()

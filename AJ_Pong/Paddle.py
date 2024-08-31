@@ -2,7 +2,7 @@ import pygame
 from constant import *
 
 class Paddle:
-    def __init__(self, screen, x, y, width, height, speed):
+    def __init__(self, screen, x, y, width, height, speed,player):
         self.screen = screen
         self.height = height
         self.width = width
@@ -10,6 +10,12 @@ class Paddle:
         self.dy = speed
         self.defaultDy = speed
         self.defaultHeight = height
+        if player == 1:
+            self.defaultPic = pygame.image.load('/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sprites/player1.png')
+            self.bigPic = pygame.image.load('/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sprites/player1big.png')
+        elif player == 2:
+            self.defaultPic = pygame.image.load('/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sprites/player2.png')
+            self.bigPic = pygame.image.load('/Users/noppynorthside/Desktop/GameDev/AJ_Pong/sprites/player2big.png')
 
     def update(self, dt):
         if self.dy > 0:
@@ -24,3 +30,8 @@ class Paddle:
 
     def render(self):
         pygame.draw.rect(self.screen, (255, 255, 255), self.rect)
+        if self.rect.height == 100:
+            self.screen.blit(self.defaultPic, (self.rect.x,self.rect.y))
+        if self.rect.height == 150:
+            self.screen.blit(self.bigPic, (self.rect.x,self.rect.y))
+        
